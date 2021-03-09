@@ -1,0 +1,213 @@
+AWSTemplateFormatVersion: 2010-09-09
+#Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - Elastic Beanstalk
+
+Parameters:
+  Bucket:
+    Type: String
+    Default: mlembucket
+  
+  AppZip:
+    Type: String
+    Default: express-minapp.zip
+
+  SolutionStack:
+    Type: String
+    Default: "64bit Amazon Linux 2 v5.3.0 running Node.js 14"
+
+  DepStack:
+    Type: String
+    Description: The VPC and RDS stack, which contains dependencies
+    Default: vpc
+    #Default: tier1-vpc-rds-kramos
+
+Resources:
+  Application:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      Description: AWS Elastic Beanstalk Sample Application
+  
+  ApplicationVersion:
+    Type: AWS::ElasticBeanstalk::ApplicationVersion
+    Properties:
+      ApplicationName: !Ref Application
+      Description: AWS ElasticBeanstalk Sample Application Version
+      SourceBundle:
+        S3Bucket: !Ref Bucket
+        S3Key: !Ref AppZip
+  
+  ConfigurationTemplate:
+    Type: AWS::ElasticBeanstalk::ConfigurationTemplate
+    Properties:
+      ApplicationName: !Ref Application
+      Description: AWS ElasticBeanstalk Sample Configuration Template
+      OptionSettings:      
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: EnvironmentType
+        Value: LoadBalanced
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: LoadBalancerType
+        Value: application
+      - Namespace: aws:elasticbeanstalk:environment:process:default
+        OptionName: Port
+        Value: '1337'
+      - Namespace: aws:elasticbeanstalk:application
+        OptionName: Application Healthcheck URL
+        Value: 'HTTP:1337/'
+      - Namespace: "aws:elasticbeanstalk:application:environment"
+        OptionName: PORT
+        Value: '1337'
+      - Namespace: "aws:elasticbeanstalk:application:environment"
+        OptionName: HOST
+        Value: !Join [':', ['{{resolve:secretsmanager', Fn::ImportValue: !Sub '${DepStack}-DBCreds', 'SecretString:host}}']]
+      - Namespace: "aws:elasticbeanstalk:application:environment"
+        OptionName: USERNAME
+        Value: !Join [':', ['{{resolve:secretsmanager', Fn::ImportValue: !Sub '${DepStack}-DBCreds', 'SecretString:username}}']]
+      - Namespace: "aws:elasticbeanstalk:application:environment"
+        OptionName: PASSWORD
+        Value: !Join [':', ['{{resolve:secretsmanager', Fn::ImportValue: !Sub '${DepStack}-DBCreds', 'SecretString:password}}']]
+      - Namespace: "aws:elasticbeanstalk:application:environment"
+        OptionName: DATABASE
+        Value: !Join [':', ['{{resolve:secretsmanager', Fn::ImportValue: !Sub '${DepStack}-DBCreds', 'SecretString:dbname}}']]
+      - Namespace: aws:autoscaling:launchconfiguration
+        OptionName: SecurityGroups
+        Value: !Ref ASGSecGroup
+      - Namespace: aws:autoscaling:asg
+        OptionName: MinSize
+        Value: '2'
+      - Namespace: aws:autoscaling:asg
+        OptionName: MaxSize
+        Value: '8'
+      - Namespace: aws:autoscaling:launchconfiguration
+        OptionName: IamInstanceProfile
+        Value: !Ref InstanceProfile
+      - Namespace: aws:ec2:vpc
+        OptionName: VPCId 
+        Value: 
+          Fn::ImportValue: 
+            !Sub '${DepStack}-VPC'
+      - Namespace: aws:ec2:vpc 
+        OptionName: Subnets
+        Value: !Join [', ', [Fn::ImportValue: !Sub '${DepStack}-PrivateSubnetA', Fn::ImportValue: !Sub '${DepStack}-PrivateSubnetB']]
+      - Namespace: aws:ec2:vpc 
+        OptionName: ELBSubnets 
+        Value: !Join [', ', [Fn::ImportValue: !Sub '${DepStack}-PublicSubnetA', Fn::ImportValue: !Sub '${DepStack}-PublicSubnetB']]
+      - Namespace: aws:ec2:vpc
+        OptionName: DBSubnets
+        Value: !Join [', ', [Fn::ImportValue: !Sub '${DepStack}-DBSubnetA', Fn::ImportValue: !Sub '${DepStack}-DBSubnetB']]
+      - Namespace: aws:elbv2:listener:default
+        OptionName: Rules
+        Value: default
+      - Namespace: aws:elbv2:listenerrule:default
+        OptionName: PathPatterns
+        Value: '/**/*'
+      - Namespace: aws:elbv2:loadbalancer
+        OptionName: SecurityGroups
+        Value: !GetAtt ELBSecGroup.GroupId
+      - Namespace: aws:elbv2:loadbalancer
+        OptionName: ManagedSecurityGroup
+        Value: !GetAtt ELBSecGroup.GroupId
+      SolutionStackName: !Ref SolutionStack
+  
+  Environment:
+    Type: AWS::ElasticBeanstalk::Environment
+    Properties:
+      ApplicationName: !Ref Application
+      Description: AWS ElasticBeanstalk Sample Environment
+      TemplateName: !Ref ConfigurationTemplate
+      VersionLabel: !Ref ApplicationVersion
+  
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument:                   
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Description: Beanstalk EC2 role
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier
+        - arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService
+  
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      Roles: 
+        - !Ref InstanceRole
+
+  ASGSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: ELBSecGroup
+    Properties:
+      GroupName: asgsg-kramos
+      GroupDescription: Auto Scaling Group Security Group
+      VpcId: 
+        Fn::ImportValue: 
+          !Sub '${DepStack}-VPC'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1337
+          ToPort: 1337
+#          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: !GetAtt ELBSecGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+#          CidrIp: 0.0.0.0/0
+          SourceSecurityGroupId: 
+            Fn::ImportValue: 
+              !Sub '${DepStack}-DBSecGroup'
+      Tags:
+      - Key: Name
+        Value: asgsg-kramos
+
+  ELBSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: elbsg-kramos
+      GroupDescription: Load Balancer Security Group
+      VpcId: 
+        Fn::ImportValue: 
+          !Sub '${DepStack}-VPC'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+      - Key: Name
+        Value: elbsg-kramos
+
+  DBIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: 
+        Fn::ImportValue: 
+          !Sub '${DepStack}-DBSecGroup'
+      SourceSecurityGroupId: !GetAtt ASGSecGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+
+Outputs:
+  StackEBApp:
+    Value: !Ref Application
+    Export:
+      Name: !Sub ${AWS::StackName}-EBApp
+
+  StackEBEnv:
+    Value: !Ref Environment
+    Export:
+      Name: !Sub ${AWS::StackName}-EBEnv
+
+  StackEBUrl:
+    Value: !GetAtt Environment.EndpointURL
+    Export:
+      Name: !Sub ${AWS::StackName}-EBUrl
+    

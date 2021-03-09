@@ -1,0 +1,372 @@
+AWSTemplateFormatVersion: 2010-09-09
+#Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - VPC & RDS
+
+Parameters:
+  AZA:
+    Type: String
+    Description: Availability Zone A 
+    Default: ap-southeast-1a 
+
+  AZB:
+    Type: String
+    Description: Availability Zone B 
+    Default: ap-southeast-1b
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 64.0.0.0/16
+      Tags:
+      - Key: Name
+        Value: vpc-kramos
+  
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZA
+      CidrBlock: 64.0.0.0/27
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: publicsubneta-kramos
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZB
+      CidrBlock: 64.0.0.32/27
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: publicsubnetb-kramos
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZA
+      CidrBlock: 64.0.16.0/27
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: privatesubneta-kramos
+  
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZB
+      CidrBlock: 64.0.16.32/27
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: privatesubnetb-kramos
+
+  DBSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZA
+      CidrBlock: 64.0.32.0/27
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: dbsubneta-kramos
+  
+  DBSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AZB
+      CidrBlock: 64.0.32.32/27
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: dbsubnetb-kramos
+
+  IGW:      
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: igw-kramos
+
+  GWtoInternet:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref IGW
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: publicrtb-kramos
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GWtoInternet
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref IGW
+
+  PublicSubnetARoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  NatIpA:
+    Type: AWS::EC2::EIP
+    DependsOn: VPC
+    Properties:
+      Domain: vpc
+      Tags:
+      - Key: Name
+        Value: nateipa-kramos
+
+  NatIpB:
+    Type: AWS::EC2::EIP
+    DependsOn: VPC
+    Properties:
+      Domain: vpc
+      Tags:
+      - Key: Name
+        Value: nateipb-kramos
+
+  NatA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatIpA.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+      - Key: Name
+        Value: natgwa-kramos
+
+  NatB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatIpB.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags:
+      - Key: Name
+        Value: natgwb-kramos
+
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: privatertba-kramos
+
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: privatertbb-kramos
+
+  PrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatA
+
+  PrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatB
+
+  PrivateSubnetARoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTableA
+
+  PrivateSubnetBRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTableB
+
+  DBSubnetARoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DBSubnetA
+      RouteTableId: !Ref PrivateRouteTableA
+
+  DBSubnetBRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DBSubnetB
+      RouteTableId: !Ref PrivateRouteTableB
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: RDS Subnet Group
+      SubnetIds:
+        - !Ref DBSubnetA
+        - !Ref DBSubnetB
+
+  DBSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: dbsg-kramos
+      GroupDescription: RDS Security Group
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: dbsg-kramos
+
+  DBInstanceA:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: mydb
+      Engine: MySQL
+      MultiAZ: true
+      PubliclyAccessible: false
+      DBInstanceClass: db.t2.micro
+      AllocatedStorage: '200'
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DBCreds}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBCreds}:SecretString:password}}'
+      VPCSecurityGroups: 
+      - !GetAtt DBSecGroup.GroupId
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      Tags:
+      - Key: Name
+        Value: mydb
+
+  DBInstanceB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: mydb
+      Engine: MySQL
+      MultiAZ: true
+      PubliclyAccessible: false
+      DBInstanceClass: db.t2.micro
+      AllocatedStorage: '200'
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DBCreds}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBCreds}:SecretString:password}}'
+      VPCSecurityGroups: 
+      - !GetAtt DBSecGroup.GroupId
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      Tags:
+      - Key: Name
+        Value: mydb
+
+  DBCreds:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: RDS Credentials
+      Name: db-creds-kramos
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"/\!@#$%^&*()'
+      Tags:
+      - Key: Name
+        Value: db-creds-kramos
+
+  DBAttachA:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref DBCreds
+      TargetId: !Ref DBInstanceA
+      TargetType: AWS::RDS::DBInstance
+
+  DBAttachB:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref DBCreds
+      TargetId: !Ref DBInstanceB
+      TargetType: AWS::RDS::DBInstance
+
+Outputs:
+  StackVPC:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC
+
+  StackPublicSubnetA:
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetA
+
+  StackPublicSubnetB:
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetB
+
+  StackPrivateSubnetA:
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnetA
+
+  StackPrivateSubnetB:
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnetB
+
+  StackDBSubnetA:
+    Value: !Ref DBSubnetA
+    Export:
+      Name: !Sub ${AWS::StackName}-DBSubnetA
+
+  StackDBSubnetB:
+    Value: !Ref DBSubnetB
+    Export:
+      Name: !Sub ${AWS::StackName}-DBSubnetB
+
+  StackDBSecGroup:
+    Value: !Ref DBSecGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DBSecGroup
+
+  StackDBSecGroupId:
+    Value: !GetAtt DBSecGroup.GroupId
+    Export:
+      Name: !Sub ${AWS::StackName}-DBSecGroupId
+  
+  StackDBNameA:
+    Value: !Ref DBInstanceA
+    Export:
+      Name: !Sub ${AWS::StackName}-DBInstanceA
+
+  StackDBNameB:
+    Value: !Ref DBInstanceB
+    Export:
+      Name: !Sub ${AWS::StackName}-DBInstanceB
+
+  StackDBCreds:
+    Value: !Ref DBCreds
+    Export:
+      Name: !Sub ${AWS::StackName}-DBCreds
+
+  StackDBEndptAddrA:
+    Value: !GetAtt DBInstanceA.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-DBEndptAddrA
+
+  StackDBEndptAddrB:
+    Value: !GetAtt DBInstanceB.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-DBEndptAddrB
