@@ -20,22 +20,22 @@ Parameters:
     Description: The VPC and RDS stack, which contains dependencies
     Default: kramos-tier1-vpc-rds
 
-  SGHostedZoneId:
-    Type: String
-    # Description: The default Hosted Zone ID for Singapore region in Beanstalk
-    # Default: Z16FZ9L249IFLT
-    Description: The default Hosted Zone ID for North Virginia region in Beanstalk
-    Default: Z117KPS5GTRQ2G
+  # NVHostedZoneId:
+  #   Type: String
+  #   # Description: The default Hosted Zone ID for Singapore region in Beanstalk
+  #   # Default: Z16FZ9L249IFLT
+  #   Description: The default Hosted Zone ID for North Virginia region in Beanstalk
+  #   Default: Z117KPS5GTRQ2G
 
-  HostedZoneId:
-    Type: String
-    Description: Existing Hosted Zone ID for apperdevops.com
-    Default: Z08257801AI6TNNWIWVBW
+  # HostedZoneId:
+  #   Type: String
+  #   Description: Existing Hosted Zone ID for apperdevops.com
+  #   Default: Z08257801AI6TNNWIWVBW
 
-  CustomUrl:
-    Type: String
-    Description: Prefix of Custom URL
-    Default: kramos-tier1.apperdevops.com
+  # CustomUrl:
+  #   Type: String
+  #   Description: Custom URL
+  #   Default: kramos-tier1.apperdevops.com
 
 Resources:
   Application:
@@ -210,15 +210,15 @@ Resources:
       FromPort: 3306
       ToPort: 3306
 
-  RecordSet:
-    Type: AWS::Route53::RecordSet
-    Properties:
-      Name: !Ref CustomUrl
-      HostedZoneId: !Ref HostedZoneId
-      AliasTarget:
-        DNSName: !GetAtt Environment.EndpointURL
-        HostedZoneId: !Ref SGHostedZoneId
-      Type: A
+  # RecordSet:
+  #   Type: AWS::Route53::RecordSet
+  #   Properties:
+  #     Name: !Ref CustomUrl
+  #     HostedZoneName: apperdevops.com.
+  #     AliasTarget:
+  #       DNSName: !GetAtt Environment.EndpointURL
+  #       HostedZoneId: !Ref NVHostedZoneId
+  #     Type: A
 
 Outputs:
   StackEBApp:
