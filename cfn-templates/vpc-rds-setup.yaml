@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-#Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - VPC & RDS
+Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - VPC & RDS
 
 Parameters:
   AZA:
@@ -340,11 +340,6 @@ Outputs:
     Value: !Ref DBSecGroup
     Export:
       Name: !Sub ${AWS::StackName}-DBSecGroup
-
-  StackDBSecGroupId:
-    Value: !GetAtt DBSecGroup.GroupId
-    Export:
-      Name: !Sub ${AWS::StackName}-DBSecGroupId
   
   StackDBNameA:
     Value: !Ref DBInstanceA

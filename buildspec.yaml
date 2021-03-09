@@ -1,0 +1,35 @@
+version: 0.2
+
+env:
+  git-credential-helper: yes
+  variables:
+    S3_BUCKET: 'tier-1-bucket'
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: latest
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Installing source NPM dependencies...
+      - cd express-minapp
+      - npm install
+      - echo Compiling the Node.js code
+  post_build:
+    commands:
+      - echo Build completed on `date`
+
+artifacts:
+  files:
+    - Procfile
+    - node_modules/**/*
+    - package.json
+    - src/index.js
+    - src/middlewares.js
+  name: express-minapp
+  base-directory: express-minapp
+
+cache:
+  paths:
+    - node_modules/**/*
