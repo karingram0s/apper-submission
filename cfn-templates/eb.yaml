@@ -2,14 +2,14 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - Elastic Beanstalk
 
 Parameters:
-  Bucket:
-    Description: temporary S3 bucket for storing zipped code
-    Type: String
-    Default: cf-templates-9ldp9v33q1ux-us-east-1
+  # Bucket:
+  #   Description: temporary S3 bucket for storing zipped code
+  #   Type: String
+  #   Default: cf-templates-9ldp9v33q1ux-us-east-1
   
-  AppZip:
-    Type: String
-    Default: express-minapp.zip
+  # AppZip:
+  #   Type: String
+  #   Default: express-minapp.zip
 
   SolutionStack:
     Type: String
@@ -43,13 +43,13 @@ Resources:
     Properties:
       Description: AWS Elastic Beanstalk Sample Application
   
-  ApplicationVersion:
-    Type: AWS::ElasticBeanstalk::ApplicationVersion
-    Properties:
-      ApplicationName: !Ref Application
-      SourceBundle:
-        S3Bucket: !Ref Bucket
-        S3Key: !Ref AppZip
+  # ApplicationVersion:
+  #   Type: AWS::ElasticBeanstalk::ApplicationVersion
+  #   Properties:
+  #     ApplicationName: !Ref Application
+  #     SourceBundle:
+  #       S3Bucket: !Ref Bucket
+  #       S3Key: !Ref AppZip
   
   ConfigurationTemplate:
     Type: AWS::ElasticBeanstalk::ConfigurationTemplate
@@ -130,7 +130,7 @@ Resources:
       ApplicationName: !Ref Application
       Description: AWS ElasticBeanstalk Sample Environment
       TemplateName: !Ref ConfigurationTemplate
-      VersionLabel: !Ref ApplicationVersion
+#      VersionLabel: !Ref ApplicationVersion
   
   InstanceRole:
     Type: AWS::IAM::Role
