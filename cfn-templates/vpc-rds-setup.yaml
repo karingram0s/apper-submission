@@ -5,12 +5,12 @@ Parameters:
   AZA:
     Type: String
     Description: Availability Zone A 
-    Default: ap-southeast-1a 
+    Default: us-east-1a 
 
   AZB:
     Type: String
     Description: Availability Zone B 
-    Default: ap-southeast-1b
+    Default: us-east-1b
 
 Resources:
   VPC:

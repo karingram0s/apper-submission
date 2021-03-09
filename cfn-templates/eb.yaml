@@ -3,7 +3,9 @@ Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 -
 
 Parameters:
   Bucket:
+    Description: temporary S3 bucket for storing zipped code
     Type: String
+    Default: cf-templates-9ldp9v33q1ux-us-east-1
   
   AppZip:
     Type: String
@@ -20,8 +22,10 @@ Parameters:
 
   SGHostedZoneId:
     Type: String
-    Description: The default Hosted Zone ID for Singapore region in Beanstalk
-    Default: Z16FZ9L249IFLT
+    # Description: The default Hosted Zone ID for Singapore region in Beanstalk
+    # Default: Z16FZ9L249IFLT
+    Description: The default Hosted Zone ID for North Virginia region in Beanstalk
+    Default: Z117KPS5GTRQ2G
 
   HostedZoneId:
     Type: String
@@ -215,7 +219,6 @@ Resources:
         DNSName: !GetAtt Environment.EndpointURL
         HostedZoneId: !Ref SGHostedZoneId
       Type: A
-      TTL: 300
 
 Outputs:
   StackEBApp:
