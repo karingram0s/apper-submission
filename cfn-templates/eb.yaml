@@ -122,13 +122,16 @@ Resources:
       - Namespace: aws:elbv2:loadbalancer
         OptionName: ManagedSecurityGroup
         Value: !GetAtt ELBSecGroup.GroupId
+      - Namespace: aws:elbv2:listener:443
+        OptionName: DefaultProcess
+        Value: https
       SolutionStackName: !Ref SolutionStack
   
   Environment:
     Type: AWS::ElasticBeanstalk::Environment
     Properties:
       ApplicationName: !Ref Application
-      Description: AWS ElasticBeanstalk Sample Environment
+      Description: AWS Elastic Beanstalk for express-minapp
       TemplateName: !Ref ConfigurationTemplate
 #      VersionLabel: !Ref ApplicationVersion
   
@@ -198,6 +201,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
           CidrIp: 0.0.0.0/0
       Tags:
       - Key: Name

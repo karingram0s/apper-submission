@@ -12,6 +12,11 @@ Parameters:
     Description: Default AWS Account
     Default: '485323199507'
 
+  VPCStack:
+    Type: String
+    Description: Name of the VPC and RDS stack
+    Default: kramos-tier1-vpc-rds
+
 Resources:
   GithubLink:
     Type: AWS::CodeStarConnections::Connection
@@ -32,9 +37,10 @@ Resources:
       RestartExecutionOnUpdate: true
       RoleArn: !GetAtt PipelineRole.Arn
       Stages: 
-        - Name: Pre-Build
+        - Name: Source
           Actions:
-            - ActionTypeId:
+            - Name: SourceBuild
+              ActionTypeId:
                 Category: Source
                 Owner: AWS
                 Provider: CodeStarSourceConnection
@@ -44,13 +50,27 @@ Resources:
                 FullRepositoryId: karingram0s/apper-submission
                 BranchName: master
                 OutputArtifactFormat: CODEBUILD_CLONE_REF
-              Name: SourceRepo
               OutputArtifacts:
                 - Name: express-minapp
               RunOrder: 1
+            - Name: SourceCfn
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: !GetAtt GithubLink.ConnectionArn
+                FullRepositoryId: karingram0s/apper-submission
+                BranchName: master
+                OutputArtifactFormat: CODE_ZIP
+              OutputArtifacts:
+                - Name: sourcerepo
+              RunOrder: 1
         - Name: Build
           Actions:
-            - ActionTypeId:
+            - Name: BuildApp
+              ActionTypeId:
                 Category: Build
                 Owner: AWS
                 Provider: CodeBuild
@@ -58,7 +78,6 @@ Resources:
               Configuration:
                 ProjectName: !Ref BuildProject
                 PrimarySource: express-minapp
-              Name: Build
               InputArtifacts:
                 - Name: express-minapp
               OutputArtifacts:
@@ -66,7 +85,65 @@ Resources:
               RunOrder: 1
         - Name: Deploy
           Actions:
-            - ActionTypeId:
+            - Name: CreateChangeSetVPC
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              InputArtifacts:
+                - Name: sourcerepo
+              Configuration:
+                ActionMode: CHANGE_SET_REPLACE
+                RoleArn: !GetAtt StackRole.Arn
+                StackName: !Ref VPCStack
+                ChangeSetName: vpc-rds-changeset
+                # TemplateConfiguration:
+                TemplatePath: sourcerepo::cfn-templates/vpc-rds-setup.yaml 
+              RunOrder: 1
+            - Name: CreateChangeSetEB
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              InputArtifacts:
+                - Name: sourcerepo
+              Configuration:
+                ActionMode: CHANGE_SET_REPLACE
+                RoleArn: !GetAtt StackRole.Arn
+                StackName: !Ref EBStack
+                ChangeSetName: eb-changeset
+                Capabilities: CAPABILITY_IAM
+                # TemplateConfiguration:
+                TemplatePath: sourcerepo::cfn-templates/eb.yaml
+              RunOrder: 1
+            - Name: ExecuteChangeSetVPC
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              Configuration:
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName: vpc-rds-changeset
+                RoleArn: !GetAtt StackRole.Arn
+                StackName: !Ref VPCStack
+              RunOrder: 2
+            - Name: ExecuteChangeSetEB
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: '1'
+              Configuration:
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName: eb-changeset
+                RoleArn: !GetAtt StackRole.Arn
+                StackName: !Ref EBStack
+              RunOrder: 2
+            - Name: DeployApp
+              ActionTypeId:
                 Category: Deploy
                 Owner: AWS
                 Provider: ElasticBeanstalk
@@ -78,10 +155,9 @@ Resources:
                 EnvironmentName:
                   Fn::ImportValue:
                     !Sub ${EBStack}-EBEnv
-              Name: Deploy-Node
               InputArtifacts:
                 - Name: express-minapp-build
-              RunOrder: 1
+              RunOrder: 3                   
       Tags:
       - Key: Name
         Value: pipeline-kramos
@@ -228,6 +304,36 @@ Resources:
       Tags:
       - Key: Name
         Value: codebuild-role-kramos
+
+  StackRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: stack-role-kramos
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: 'sts:AssumeRole'
+          Principal:
+            Service: cloudformation.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+        - PolicyName: stack-iampolicy-kramos
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:*
+                  - elasticbeanstalk:*
+                  - elasticloadbalancing:*
+                  - iam:*
+                  - rds:*
+                  - secretsmanager:*
+                Resource: '*'
+      Tags:
+      - Key: Name
+        Value: stack-role-kramos
 
   Bucket:
     Type: AWS::S3::Bucket
