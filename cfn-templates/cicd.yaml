@@ -324,11 +324,13 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - cloudformation:*
                   - ec2:*
                   - elasticbeanstalk:*
                   - elasticloadbalancing:*
                   - iam:*
                   - rds:*
+                  - s3:*
                   - secretsmanager:*
                 Resource: '*'
       Tags:
