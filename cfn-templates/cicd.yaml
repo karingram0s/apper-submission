@@ -153,9 +153,8 @@ Resources:
                   - cloudformation:SetStackPolicy
                   - cloudformation:Update*
                   - cloudformation:ValidateTemplate
-                  - codedeploy:CreateDeployment
-                  - codedeploy:Get*
-                  - codedeploy:RegisterApplicationRevision
+                  - codedeploy:*
+                  - codestar-connections:*
                   - iam:PassRole
                 Resource: '*'
               - Effect: Allow
@@ -163,10 +162,10 @@ Resources:
                   - codebuild:Batch*
                   - codebuild:Start*
                 Resource: !GetAtt BuildProject.Arn
-              - Effect: Allow
-                Action:
-                  - codestar-connections:UseConnection
-                Resource: !Ref GithubLink
+              # - Effect: Allow
+              #   Action:
+              #     - codestar-connections:UseConnection
+              #   Resource: !Ref GithubLink
               - Effect: Allow
                 Action:
                   - s3:*
@@ -212,19 +211,20 @@ Resources:
                   - codebuild:Batch*
                   - codebuild:Create*
                   - codebuild:UpdateReport
+                  - codestar-connections:*
                   - logs:Create*
                   - logs:PutLogEvents
                   - s3:Get*
                   - s3:List*
                   - s3:Put*
-                Resource:
-                  - arn:aws:s3:::*
-                  - arn:aws:logs:*:*:log-group:/aws/codebuild/*
-                  - arn:aws:codebuild:*
-              - Effect: Allow
-                Action:
-                  - codestar-connections:UseConnection
-                Resource: !Ref GithubLink
+                Resource: '*'
+                  # - arn:aws:s3:::*
+                  # - arn:aws:logs:*:*:log-group:/aws/codebuild/*
+                  # - arn:aws:codebuild:*
+              # - Effect: Allow
+              #   Action:
+              #     - codestar-connections:UseConnection
+              #   Resource: !Ref GithubLink
       Tags:
       - Key: Name
         Value: codebuild-role-kramos
