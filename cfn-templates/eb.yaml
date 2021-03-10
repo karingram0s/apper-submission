@@ -122,9 +122,6 @@ Resources:
       - Namespace: aws:elbv2:loadbalancer
         OptionName: ManagedSecurityGroup
         Value: !GetAtt ELBSecGroup.GroupId
-      - Namespace: aws:elbv2:listener:443
-        OptionName: DefaultProcess
-        Value: https
       SolutionStackName: !Ref SolutionStack
   
   Environment:
