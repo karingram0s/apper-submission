@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - CloudFront & Route53
+
+Parameters:
+  Domain:
+    Type: String
+    Description: URL to be checked
+    Default: kramos-tier1.apperdevops.com
+
+  HostedZoneId:
+    Type: String
+    Default: Z08257801AI6TNNWIWVBW
+
+  CertificateArn:
+    Type: String
+    Description: Certificate for HTTPS connections
+    Default: arn:aws:acm:us-east-1:485323199507:certificate/32a0a6bc-840c-40d7-b331-e5f97dc2aeee
+
+  EBStack:
+    Type: String
+    Description: Elastic Beanstalk Stack
+    Default: kramos-tier1-eb
+
+  VPCStack:
+    Type: String
+    Description: The VPC and RDS stack
+    Default: kramos-tier1-vpc-rds
+
+Resources: 
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - DomainName:
+              Fn::ImportValue:  !Sub ${EBStack}-EBUrl
+            Id: !Ref Domain
+            CustomOriginConfig:
+              HTTPPort: 80
+              OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          TargetOriginId: !Ref Domain
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: !Ref CloudFrontCachePolicy
+        PriceClass: PriceClass_All
+        Aliases: 
+          - !Ref Domain
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: 'sni-only'
+      Tags:
+      - Key: Name
+        Value: cloudfront-dist-kramos 
+
+  CloudFrontCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: cache-policy-kramos
+        DefaultTTL: 86400
+        MaxTTL: 31536000
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: 'none'
+          EnableAcceptEncodingGzip: True
+          HeadersConfig:
+            HeaderBehavior: 'none'
+          QueryStringsConfig:
+            QueryStringBehavior: 'all'
+  
+  RecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Ref Domain
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+      HostedZoneId: !Ref HostedZoneId
