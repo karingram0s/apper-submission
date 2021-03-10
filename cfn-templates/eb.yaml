@@ -2,14 +2,14 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Apper DevOps Engineer Technical Challenge - Karing Ramos - Tier 1 - Elastic Beanstalk
 
 Parameters:
-  # Bucket:
-  #   Description: temporary S3 bucket for storing zipped code
-  #   Type: String
-  #   Default: cf-templates-9ldp9v33q1ux-us-east-1
+  Bucket:
+    Description: temporary S3 bucket for storing zipped code
+    Type: String
+    Default: cf-templates-9ldp9v33q1ux-us-east-1
   
-  # AppZip:
-  #   Type: String
-  #   Default: express-minapp.zip
+  AppZip:
+    Type: String
+    Default: express-minapp.zip
 
   SolutionStack:
     Type: String
@@ -20,36 +20,19 @@ Parameters:
     Description: The VPC and RDS stack, which contains dependencies
     Default: kramos-tier1-vpc-rds
 
-  # NVHostedZoneId:
-  #   Type: String
-  #   # Description: The default Hosted Zone ID for Singapore region in Beanstalk
-  #   # Default: Z16FZ9L249IFLT
-  #   Description: The default Hosted Zone ID for North Virginia region in Beanstalk
-  #   Default: Z117KPS5GTRQ2G
-
-  # HostedZoneId:
-  #   Type: String
-  #   Description: Existing Hosted Zone ID for apperdevops.com
-  #   Default: Z08257801AI6TNNWIWVBW
-
-  # CustomUrl:
-  #   Type: String
-  #   Description: Custom URL
-  #   Default: kramos-tier1.apperdevops.com
-
 Resources:
   Application:
     Type: AWS::ElasticBeanstalk::Application
     Properties:
       Description: AWS Elastic Beanstalk Sample Application
   
-  # ApplicationVersion:
-  #   Type: AWS::ElasticBeanstalk::ApplicationVersion
-  #   Properties:
-  #     ApplicationName: !Ref Application
-  #     SourceBundle:
-  #       S3Bucket: !Ref Bucket
-  #       S3Key: !Ref AppZip
+  ApplicationVersion:
+    Type: AWS::ElasticBeanstalk::ApplicationVersion
+    Properties:
+      ApplicationName: !Ref Application
+      SourceBundle:
+        S3Bucket: !Ref Bucket
+        S3Key: !Ref AppZip
   
   ConfigurationTemplate:
     Type: AWS::ElasticBeanstalk::ConfigurationTemplate
@@ -130,7 +113,7 @@ Resources:
       ApplicationName: !Ref Application
       Description: AWS Elastic Beanstalk for express-minapp
       TemplateName: !Ref ConfigurationTemplate
-#      VersionLabel: !Ref ApplicationVersion
+      VersionLabel: !Ref ApplicationVersion
   
   InstanceRole:
     Type: AWS::IAM::Role
@@ -199,11 +182,6 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
       Tags:
       - Key: Name
         Value: elbsg-kramos
@@ -218,16 +196,6 @@ Resources:
       IpProtocol: tcp
       FromPort: 3306
       ToPort: 3306
-
-  # RecordSet:
-  #   Type: AWS::Route53::RecordSet
-  #   Properties:
-  #     Name: !Ref CustomUrl
-  #     HostedZoneName: apperdevops.com.
-  #     AliasTarget:
-  #       DNSName: !GetAtt Environment.EndpointURL
-  #       HostedZoneId: !Ref NVHostedZoneId
-  #     Type: A
 
 Outputs:
   StackEBApp:
